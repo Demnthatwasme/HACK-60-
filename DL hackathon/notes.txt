@@ -1,0 +1,128 @@
+mid eval : saturday
+final eval : sunday
+
+per group : 30 mins slot
+20 mins for demo , presentation , 10 mins for QNA
+
+4 panels
+ending : sunday 10 am 
+
+anurag pandey : (domain) digital signal processing 
+-- also image processing (computer vision++)
+
+*hackathon based hiring (for final year though)
+problem statement:
+-genai
+-vision
+-reinforcement learning (his ++)
+-physics informed neural network
+-Deepfake
+
+* WEB APP preferred , CLI works though 
+PS 1: intent aware and explainable hybrid retrival system
+-- build smart search system
+-- understanding user intent data context relationships 
+and meaning to find better
+-- improve search quality using multiple ranking steps smart connections between data , clear explainations to user
+--> dataset will be given 
+
+PS 2 : Content Structing and enhancement Engine
+-- LLM has a problem .. if there is leagacy system ? .. ?
+--> create a small SLM
+
+--> dataset will be given
+-- parameters should be less than 4B
+-- can use huggingface
+-- transformer , PEFT / LoRA
+
+--inference ? --> should be such that you can use on your local system , meaning not heavy 
+--> output matters so does the time taken
+--> evaluation : accuracy , performance of model , size of model , approach and USER INTERFACE
+:: optimise token consumption !
+--> dataset : related to job resume
+
+
+PS 3: Context Compression for AI Agent
+-- Problem: agents drown in data. Expanding context windows is failing.
+Cause : full history stuffing and unfiltered context traces. 
+OBJ:
+-- build resuable module that compresses 
+: can use model SLM , with LOW CONTEXT mechanism , and adapt it to manage large amount of CONTEXT
+
+
+###############                    VISION           ##########################
+
+prefered area ++
+ // demo and model are required to be good ! // 
+
+PS 4: VLN --> vision language navigation 
+-- enable a soft bot to understand natural language 
+-- this should be run on ROS 
+-- gazibo ?
+
+--> note : he has face recognition
+--> you have to make it navigate it to the given person
+
+-> command in natural language navigation instruction with spatial recognition
+
+EVAL:
+navigation success 
+path efficiency 
+language understanding
+give simulation demo
+-- semantic map will be looked
+-- no hardcoding
+
+dataset given : outdoor and indoor : choose one
+
+PS 5: LiDAR + Camera Fusion for 3D perception
+
+data : point cloud data for LiDAR and they are calibirated 
+-- fuse LiDAR and camera for robust 3D perception
+-- detect and classify objects using RGB image
+-- you have to visualise the 2D image into 3D
+
+dataset : KITTI (example)
+
+PS 6: Autonomous Obstacle Avoidance & Path Planning 
+
+-- enable a soft bot to autonomously navigate from a start point to a given goal 
+-- detect and avoid obstacles
+-- should respond to dynamic changes 
+suggested : ROS2 + Gazebo + Turtlebot3
+--> looking for autonomity 
+-- path planning , can use and shortest path
+-- points for dynamic creation ? (like obstacle)
+
+RL based decision making(preference / bonus ++)
+
+PS 7 : Multi Agent Collaborative Task Execution
+-- 3 soft bots
+-- should work in collaboration
+-- ROS
+-- demostrate a jointly completed task
+
+EVAL :
+-- collision free 
+-- task completion rate
+-- RL bonus point
+
+
+PS 8 : gesture & pose control autonomous interface
+
+-- you can use mediapipe
+-- the softbot takes 
+
+-- recognition accuracy
+-- latency
+-- robustness to variations
+
+
+PS 9: Emotion aware human system interaction
+
+-- facial + audio emotion
+
+
+PS 10 : hyper- personalization engine for conent recommendation 
+
+
