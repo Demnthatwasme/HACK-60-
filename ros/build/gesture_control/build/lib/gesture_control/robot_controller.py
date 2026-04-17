@@ -17,24 +17,29 @@ class RobotController(Node):
 
         self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
 
+        self.current_gesture = "STOP"
+
+        # Publish continuously at 10 Hz
+        self.timer = self.create_timer(0.1, self.publish_motion)
+
     def listener_callback(self, msg):
-        gesture = msg.data
+        self.current_gesture = msg.data
+        self.get_logger().info(f"Gesture: {self.current_gesture}")
+
+    def publish_motion(self):
         twist = Twist()
 
-        if gesture == "FORWARD":
+        if self.current_gesture == "FORWARD":
             twist.linear.x = 0.5
 
-        elif gesture == "STOP":
+        elif self.current_gesture == "STOP":
             twist.linear.x = 0.0
 
-        elif gesture == "TURN_LEFT":
+        elif self.current_gesture == "TURN_LEFT":
             twist.angular.z = 0.5
 
-        elif gesture == "TURN_RIGHT":
+        elif self.current_gesture == "TURN_RIGHT":
             twist.angular.z = -0.5
-
-        elif gesture == "GRAB":
-            self.get_logger().info("GRAB action triggered")
 
         self.publisher_.publish(twist)
 

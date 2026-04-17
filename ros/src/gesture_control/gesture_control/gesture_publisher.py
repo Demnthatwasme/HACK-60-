@@ -33,11 +33,12 @@ class GesturePublisher(Node):
         self.publisher_ = self.create_publisher(String, 'gesture_cmd', 10)
 
         # 1. Load AI Brain and Classes
-        current_dir = os.path.dirname(__file__)
+        # current_dir = os.path.dirname(__file__)
+        MODEL_PATH = "/home/dev/Desktop/HACK-60-/DL hackathon"
         try:
-            self.classes = np.load(os.path.join(current_dir, 'classes.npy'), allow_pickle=True)
+            self.classes = np.load(os.path.join(MODEL_PATH, 'classes.npy'), allow_pickle=True)
             self.model = GestureNet(63, len(self.classes))
-            self.model.load_state_dict(torch.load(os.path.join(current_dir, 'gesture_dl_model.pth')))
+            self.model.load_state_dict(torch.load(os.path.join(MODEL_PATH, 'gesture_dl_model.pth')))
             self.model.eval()
             self.get_logger().info("AI Model loaded successfully.")
         except Exception as e:
@@ -54,7 +55,7 @@ class GesturePublisher(Node):
         VisionRunningMode = mp.tasks.vision.RunningMode
 
         self.options = HandLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=os.path.join(current_dir, 'hand_landmarker.task')),
+            base_options=BaseOptions(model_asset_path=os.path.join(MODEL_PATH, 'hand_landmarker.task')),
             running_mode=VisionRunningMode.IMAGE,
             num_hands=1
         )
