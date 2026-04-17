@@ -4,7 +4,7 @@ import csv
 import os
 
 # --- SET YOUR CURRENT GESTURE HERE ---
-GESTURE_LABEL = "UNKNOWN"  # Options: "STOP", "FORWARD", "TURN_LEFT", "TURN_RIGHT", "GRAB" , "UNKNOWNsss"
+GESTURE_LABEL = "STOP"  # Options: "STOP", "FORWARD", "TURN_LEFT", "TURN_RIGHT", "DAB" , "UNKNOWN"
 # -------------------------------------
 
 # 1. Setup the Modern Tasks API
@@ -64,25 +64,27 @@ with open(csv_file, mode='a', newline='') as f:
             detection_result = landmarker.detect(mp_image)
 
             # Extract data and draw visual feedback
+            # Extract data and draw visual feedback
             if detection_result.hand_landmarks:
-                for hand_landmarks in detection_result.hand_landmarks:
-                    
-                    # Draw green circles on the joints
-                    for landmark in hand_landmarks:
-                        x = int(landmark.x * frame.shape[1])
-                        y = int(landmark.y * frame.shape[0])
-                        cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
+                # Just grab the very first hand detected on screen
+                target_hand_landmarks = detection_result.hand_landmarks[0]
 
-                    # Listen for the save key
-                    key = cv2.waitKey(1) & 0xFF
-                    if key == ord('s'):
-                        row = [GESTURE_LABEL]
-                        for landmark in hand_landmarks:
-                            row.extend([landmark.x, landmark.y, landmark.z])
-                        
-                        writer.writerow(row)
-                        frame_count += 1 # Update our running tally
-                        print(f"Total {GESTURE_LABEL} frames: {frame_count}")
+                # Draw green circles on the joints
+                for landmark in target_hand_landmarks:
+                    x = int(landmark.x * frame.shape[1])
+                    y = int(landmark.y * frame.shape[0])
+                    cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
+
+                # Listen for the save key
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord('s'):
+                    row = [GESTURE_LABEL]
+                    for landmark in target_hand_landmarks:
+                        row.extend([landmark.x, landmark.y, landmark.z])
+                    
+                    writer.writerow(row)
+                    frame_count += 1 
+                    print(f"Total {GESTURE_LABEL} frames: {frame_count}")
 
             # --- NEW: ON-SCREEN DASHBOARD ---
             # Draw the current gesture label in blue

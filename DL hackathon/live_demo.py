@@ -4,7 +4,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 import os
+from collections import deque, Counter
 import torch.nn.functional as F
+from collections import deque
+import statistics
+import math
 
 print("1. Loading AI Brain...")
 class GestureNet(nn.Module):
@@ -48,6 +52,7 @@ HAND_CONNECTIONS = [
 ]
 
 print("2. Starting Live Inference...")
+prediction_buffer = deque(maxlen=7) # Remembers the last 7 frames
 with HandLandmarker.create_from_options(options) as landmarker:
     cap = cv2.VideoCapture(0)
 
@@ -78,19 +83,33 @@ with HandLandmarker.create_from_options(options) as landmarker:
                 target_hand_landmarks = detection_result.hand_landmarks[0]
             # ----------------------------------------------------
 
-            # --- NORMALIZED COORDINATE EXTRACTION ---
-            wrist = target_hand_landmarks[0] # Anchor point
-            coords = []
+            # --- NORMALIZED & RIGID BONE SCALED EXTRACTION ---
+            wrist = target_hand_landmarks[0] 
+            middle_knuckle = target_hand_landmarks[9]
             
+            # Calculate 3D distance between wrist and middle knuckle
+            # Calculate 3D distance between wrist and middle knuckle
+            bone_length = math.sqrt(
+                (middle_knuckle.x - wrist.x)**2 +
+                (middle_knuckle.y - wrist.y)**2 +
+                (middle_knuckle.z - wrist.z)**2
+            )
+            # CLAMP: Prevent the math explosion
+            bone_length = max(bone_length, 0.05)
+            if bone_length == 0: 
+                bone_length = 1.0
+                
+            coords = []
             for lm in target_hand_landmarks:
-                # Subtract wrist position to make it relative!
-                rel_x = lm.x - wrist.x
-                rel_y = lm.y - wrist.y
-                rel_z = lm.z - wrist.z
+                # Subtract wrist and scale by bone length in one step
+                rel_x = (lm.x - wrist.x) / bone_length
+                rel_y = (lm.y - wrist.y) / bone_length
+                rel_z = (lm.z - wrist.z) / bone_length
                 coords.extend([rel_x, rel_y, rel_z])
             
             input_tensor = torch.FloatTensor([coords])
             input_tensor.requires_grad = True 
+            # -------------------------------------------------
             # ----------------------------------------
             
             outputs = model(input_tensor)
@@ -99,13 +118,27 @@ with HandLandmarker.create_from_options(options) as landmarker:
             predicted_idx = torch.argmax(outputs).item()
             prediction_label = classes[predicted_idx]
             
-            # --- THE HYBRID GARBAGE FILTER ---
-            if prediction_label == "UNKNOWN" or confidence < 85.0:
-                display_text = "Command: --- (Waiting)"
-                text_color = (150, 150, 150) # Gray
+            # --- THE HYBRID GARBAGE FILTER & DEBOUNCING ---
+            # --- THE STRICT-MAJORITY DEBOUNCER ---
+            raw_prediction = prediction_label if confidence >= 85.0 else "UNKNOWN"
+            prediction_buffer.append(raw_prediction)
+            
+            # Count the occurrences of each prediction in the buffer
+            counts = Counter(prediction_buffer)
+            most_common_pred, count = counts.most_common(1)[0]
+            
+            # Require the command to appear in at least 4 out of the 7 frames (Strict Majority)
+            if count >= 4:
+                stable_command = most_common_pred
             else:
-                display_text = f"Command: {prediction_label}"
-                text_color = (0, 255, 0) # Green
+                stable_command = "UNKNOWN"
+
+            if stable_command == "UNKNOWN":
+                display_text = "Command: --- (Waiting)"
+                text_color = (150, 150, 150)
+            else:
+                display_text = f"Command: {stable_command}"
+                text_color = (0, 255, 0)
             
             # --- EXPLAINABLE AI: SKELETAL HEATMAP ---
             model.zero_grad()

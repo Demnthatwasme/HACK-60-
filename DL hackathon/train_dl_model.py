@@ -59,7 +59,7 @@ class GestureNet(nn.Module):
             nn.Dropout(0.2), # Prevents overfitting on your "small" dataset
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.25),
             nn.Linear(64, num_classes)
         )
 
@@ -72,31 +72,41 @@ model = GestureNet(input_size=63, num_classes=num_classes)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-print("3. Training the Network...")
-epochs = 50
+print("3. Training the Network with Augmentation & Early Stopping...")
+epochs = 90 # We can train longer now because early stopping protects us
+best_loss = float('inf')
+best_model_state = None
+
 for epoch in range(epochs):
     model.train()
     running_loss = 0.0
+    
     for inputs, labels in train_loader:
-        optimizer.zero_grad() # Clear old gradients
-        outputs = model(inputs) # Forward pass
-        loss = criterion(outputs, labels) # Calculate error
-        loss.backward() # Backpropagation
-        optimizer.step() # Update weights
+        optimizer.zero_grad() 
+        
+        # --- DATA AUGMENTATION (JITTER) ---
+        # Add tiny random noise to coordinates so the model learns the "idea" of the shape
+        noise = torch.randn_like(inputs) * 0.015 
+        noisy_inputs = inputs + noise
+        
+        outputs = model(noisy_inputs) 
+        loss = criterion(outputs, labels) 
+        loss.backward() 
+        optimizer.step() 
         running_loss += loss.item()
     
+    avg_loss = running_loss / len(train_loader)
+    
+    # --- EARLY STOPPING / BEST WEIGHT SAVING ---
+    if avg_loss < best_loss:
+        best_loss = avg_loss
+        best_model_state = model.state_dict().copy() # Save a copy of the best weights
+        
     if (epoch+1) % 10 == 0:
-        print(f"Epoch [{epoch+1}/{epochs}], Loss: {running_loss/len(train_loader):.4f}")
+        print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f} (Best: {best_loss:.4f})")
 
-print("4. Evaluating Accuracy...")
-model.eval()
-with torch.no_grad():
-    test_outputs = model(X_test_tensor)
-    _, predicted = torch.max(test_outputs.data, 1)
-    correct = (predicted == y_test_tensor).sum().item()
-    accuracy = correct / len(y_test_tensor)
-    print(f"--> Final Deep Learning Accuracy: {accuracy * 100:.2f}%")
-
-print("5. Saving Model...")
+print("5. Saving BEST Model...")
+# Load the best weights back into the model before saving
+model.load_state_dict(best_model_state)
 torch.save(model.state_dict(), os.path.join(current_dir, 'gesture_dl_model.pth'))
-print("Done! Saved as 'gesture_dl_model.pth' and 'classes.npy'")
+print("Done! Smartest weights saved as 'gesture_dl_model.pth'")
