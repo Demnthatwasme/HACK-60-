@@ -1,0 +1,12 @@
+# Data Processing
+pandas
+numpy
+scikit-learn
+
+# Computer Vision & MediaPipe
+opencv-contrib-python
+mediapipe
+
+# Deep Learning (PyTorch)
+torch
+torchvision

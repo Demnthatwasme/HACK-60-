@@ -1,0 +1,4 @@
+[console_scripts]
+gesture_pub = gesture_control.gesture_publisher:main
+robot_ctrl = gesture_control.robot_controller:main
+

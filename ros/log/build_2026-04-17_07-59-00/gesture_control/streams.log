@@ -1,0 +1,41 @@
+[7.526s] Invoking command in '/home/dev/Desktop/HACK-60-/ros/src/gesture_control': CONDA_PROMPT_MODIFIER=(base) PYTHONPATH=/home/dev/Desktop/HACK-60-/ros/build/gesture_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/gesture_control build --build-base /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build install --record /home/dev/Desktop/HACK-60-/ros/build/gesture_control/install.log --single-version-externally-managed install_data
+[7.976s] running egg_info
+[7.978s] creating ../../build/gesture_control/gesture_control.egg-info
+[7.978s] writing ../../build/gesture_control/gesture_control.egg-info/PKG-INFO
+[7.978s] writing dependency_links to ../../build/gesture_control/gesture_control.egg-info/dependency_links.txt
+[7.978s] writing entry points to ../../build/gesture_control/gesture_control.egg-info/entry_points.txt
+[7.978s] writing requirements to ../../build/gesture_control/gesture_control.egg-info/requires.txt
+[7.979s] writing top-level names to ../../build/gesture_control/gesture_control.egg-info/top_level.txt
+[7.979s] writing manifest file '../../build/gesture_control/gesture_control.egg-info/SOURCES.txt'
+[7.983s] reading manifest file '../../build/gesture_control/gesture_control.egg-info/SOURCES.txt'
+[7.984s] writing manifest file '../../build/gesture_control/gesture_control.egg-info/SOURCES.txt'
+[7.985s] running build
+[7.985s] running build_py
+[7.985s] creating /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build
+[7.985s] creating /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib
+[7.985s] creating /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib/gesture_control
+[7.985s] copying gesture_control/__init__.py -> /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib/gesture_control
+[7.985s] copying gesture_control/gesture_publisher.py -> /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib/gesture_control
+[7.986s] copying gesture_control/robot_controller.py -> /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib/gesture_control
+[7.986s] running install
+[7.989s] running install_lib
+[7.989s] creating /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control
+[7.990s] copying /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib/gesture_control/__init__.py -> /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control
+[7.990s] copying /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib/gesture_control/gesture_publisher.py -> /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control
+[7.990s] copying /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build/lib/gesture_control/robot_controller.py -> /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control
+[7.990s] byte-compiling /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control/__init__.py to __init__.cpython-310.pyc
+[7.990s] byte-compiling /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control/gesture_publisher.py to gesture_publisher.cpython-310.pyc
+[7.991s] byte-compiling /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control/robot_controller.py to robot_controller.cpython-310.pyc
+[7.991s] running install_data
+[7.991s] creating /home/dev/Desktop/HACK-60-/ros/install/gesture_control/share/ament_index
+[7.991s] creating /home/dev/Desktop/HACK-60-/ros/install/gesture_control/share/ament_index/resource_index
+[7.992s] creating /home/dev/Desktop/HACK-60-/ros/install/gesture_control/share/ament_index/resource_index/packages
+[7.992s] copying resource/gesture_control -> /home/dev/Desktop/HACK-60-/ros/install/gesture_control/share/ament_index/resource_index/packages
+[7.992s] copying package.xml -> /home/dev/Desktop/HACK-60-/ros/install/gesture_control/share/gesture_control
+[7.992s] running install_egg_info
+[7.995s] Copying ../../build/gesture_control/gesture_control.egg-info to /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages/gesture_control-0.0.0-py3.10.egg-info
+[7.996s] running install_scripts
+[8.021s] Installing gesture_pub script to /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/gesture_control
+[8.021s] Installing robot_ctrl script to /home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/gesture_control
+[8.021s] writing list of installed files to '/home/dev/Desktop/HACK-60-/ros/build/gesture_control/install.log'
+[8.044s] Invoked command in '/home/dev/Desktop/HACK-60-/ros/src/gesture_control' returned '0': CONDA_PROMPT_MODIFIER=(base) PYTHONPATH=/home/dev/Desktop/HACK-60-/ros/build/gesture_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dev/Desktop/HACK-60-/ros/install/gesture_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/gesture_control build --build-base /home/dev/Desktop/HACK-60-/ros/build/gesture_control/build install --record /home/dev/Desktop/HACK-60-/ros/build/gesture_control/install.log --single-version-externally-managed install_data
