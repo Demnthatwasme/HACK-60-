@@ -124,8 +124,8 @@ class ROMPGMRPipeline:
             print(f"Loading GMR with robot: {robot_xml_path}")
             
             # GMR init expects "smplx" as the key in its config dictionary.
-            # We lower damping to 0.02 to prevent the IK solver from "freezing", but keep enough to avoid jitter.
-            self.retargeter = GeneralMotionRetargeting("smplx", robot_xml_path, use_velocity_limit=True, damping=0.02)
+            # We lower damping to 0.05 to prevent the IK solver from "freezing" joints during fast movements, while keeping it slightly smooth.
+            self.retargeter = GeneralMotionRetargeting("smplx", robot_xml_path, use_velocity_limit=True, damping=0.05)
             print("GMR Retargeter Initialized.")
         else:
             self.retargeter = None
@@ -252,13 +252,19 @@ class ROMPGMRPipeline:
                 # This makes squats work perfectly, but makes jumping impossible.
                 robot_qpos = self.retargeter.retarget(human_motion_dict, offset_to_ground=True)
                 
-                # --- ROBOT JITTER FILTERING (EMA) ---
+                # --- ADAPTIVE ROBOT JITTER FILTERING ---
                 # Smoothing the final robot joint positions instead of raw human poses 
                 # avoids mathematical bugs with axis-angles.
-                alpha = 0.4 # Higher = more responsive/less lag, Lower = smoother (0.4 is a sweet spot)
                 if not hasattr(self, 'prev_qpos'):
                     self.prev_qpos = robot_qpos.copy()
+                    alpha = 0.5
                 else:
+                    # Calculate overall joint velocity (difference from last frame)
+                    diff = np.linalg.norm(robot_qpos[7:] - self.prev_qpos[7:])
+                    # Scale difference to an alpha between 0.05 (still, heavy smoothing) and 0.8 (fast, no lag)
+                    # A diff of ~0.0 is still. A diff of > 0.5 is very fast movement.
+                    alpha = np.clip(diff * 1.5 + 0.05, 0.05, 0.8)
+                    
                     # Fix quaternion sign flipping before interpolation
                     q1 = self.prev_qpos[3:7]
                     q2 = robot_qpos[3:7]
