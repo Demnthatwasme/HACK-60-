@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- T5.1 — HTML skeleton -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+        content="G1 Mission Control — Real-time teleoperation dashboard for Unitree G1 robot. ROMP pose estimation, GMR retargeting and MuJoCo simulation." />
+  <title>G1 Mission Control</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;800;900&display=swap"
+        rel="stylesheet" />
+
+  <!-- Dashboard CSS -->
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- T5.2 — Header -->
+  <header class="header">
+    <div class="header-left">
+      <h1>G1 Mission Control</h1>
+      <p>Webcam → ROMP → GMR → Unitree G1 Simulation</p>
+    </div>
+    <div class="header-right">
+      <div class="status-chip" id="statusChip" aria-label="Pipeline status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Idle</span>
+      </div>
+      <button class="btn-primary" id="toggleBtn" onclick="toggleInference()"
+              aria-label="Start or stop inference pipeline">
+        Start Inference
+      </button>
+    </div>
+  </header>
+
+  <!-- T5.3b — Mock mode banner (shown when /health returns mock_mode:true) -->
+  <div class="mock-banner" id="mockBanner" style="display:none" role="alert">
+    ⚡ MOCK MODE — Deploy to target machine for real inference
+  </div>
+
+  <!-- Dashboard grid -->
+  <main class="dashboard-grid">
+
+    <!-- T5.3 — Pipeline flow bar -->
+    <div class="pipeline-info" aria-label="Pipeline stages">
+      <div class="pipe-step">
+        <span class="step-num">1</span>
+        <span>Webcam Capture</span>
+      </div>
+      <span class="pipe-arrow" aria-hidden="true">→</span>
+      <div class="pipe-step">
+        <span class="step-num">2</span>
+        <span>ROMP Pose Est.</span>
+      </div>
+      <span class="pipe-arrow" aria-hidden="true">→</span>
+      <div class="pipe-step">
+        <span class="step-num">3</span>
+        <span>SMPL 3D Joints</span>
+      </div>
+      <span class="pipe-arrow" aria-hidden="true">→</span>
+      <div class="pipe-step">
+        <span class="step-num">4</span>
+        <span>GMR Retarget</span>
+      </div>
+      <span class="pipe-arrow" aria-hidden="true">→</span>
+      <div class="pipe-step">
+        <span class="step-num">5</span>
+        <span>G1 Sim (MuJoCo)</span>
+      </div>
+    </div>
+
+    <!-- T5.4 — LEFT stream card: VIBE Mocap -->
+    <div class="stream-card" id="vibeCard">
+      <div class="stream-header">
+        <span class="stream-label">Input: VIBE Mocap</span>
+        <span class="stream-badge badge-live" id="vibeBadge"
+              style="display:none" aria-label="Stream live">● Live</span>
+      </div>
+      <div class="stream-viewport" id="vibeViewport">
+        <div class="stream-placeholder" id="vibePlaceholder">
+          <span class="ph-icon" aria-hidden="true">🦴</span>
+          <span>Press Start to begin inference</span>
+          <span style="font-size:10px;opacity:0.6;">MediaPipe skeleton + posture label</span>
+        </div>
+        <!-- src is set dynamically by JS when inference starts -->
+        <img id="vibeFeed" src="" alt="VIBE Mocap stream" style="display:none" />
+      </div>
+    </div>
+
+    <!-- T5.4 — RIGHT stream card: MuJoCo G1 Sim -->
+    <div class="stream-card" id="simCard">
+      <div class="stream-header">
+        <span class="stream-label">Output: G1 Physics Sim</span>
+        <span class="stream-badge badge-sim" id="simBadge"
+              style="display:none" aria-label="Simulation active">● Sim</span>
+      </div>
+      <div class="stream-viewport" id="simViewport">
+        <div class="stream-placeholder" id="simPlaceholder">
+          <span class="ph-icon" aria-hidden="true">🤖</span>
+          <span>Awaiting retargeted pose data</span>
+          <span style="font-size:10px;opacity:0.6;">MuJoCo offscreen render</span>
+        </div>
+        <img id="robotFeed" src="" alt="G1 MuJoCo simulation stream" style="display:none" />
+      </div>
+    </div>
+
+    <!-- T5.5 — Metrics bar: 7 cards -->
+    <div class="metrics-bar" role="region" aria-label="Pipeline metrics">
+
+      <div class="metric-card">
+        <div class="metric-label">Pipeline FPS</div>
+        <div class="metric-value val-green" id="metricFps">—</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">ROMP Inference</div>
+        <div class="metric-value val-cyan" id="metricInference">
+          —<span class="metric-unit">ms</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">GMR Retarget</div>
+        <div class="metric-value val-blue" id="metricRetarget">
+          —<span class="metric-unit">ms</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">MuJoCo Render</div>
+        <div class="metric-value val-amber" id="metricRender">
+          —<span class="metric-unit">ms</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Person Detected</div>
+        <div class="metric-value val-green" id="metricPerson">—</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">VIBE Posture</div>
+        <div class="metric-value val-purple" id="metricPosture">—</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Frames Processed</div>
+        <div class="metric-value val-amber" id="metricFrames">0</div>
+      </div>
+
+    </div>
+    <!-- /metrics-bar -->
+
+    <!-- T5.6 — Telemetry log -->
+    <div class="telemetry" role="log" aria-live="polite" aria-label="System log">
+      <div class="telemetry-header">
+        <h3>System Log</h3>
+        <button class="log-clear" onclick="clearLog()" id="clearLogBtn"
+                aria-label="Clear system log">Clear</button>
+      </div>
+      <div class="log-entries" id="logEntries">
+        <div class="log-line">
+          <span class="log-ts">[init]</span>
+          <span>Dashboard loaded. Models initializing in background...</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+  <!-- /dashboard-grid -->
+
+</div>
+<!-- /page-wrap -->
+
+<!-- ── Inline JS (T5.7 – T5.10) ────────────────────────────────────────────── -->
+<script>
+"use strict";
+
+/* ── State ───────────────────────────────────────────────────────────────── */
+let metricsInterval = null;
+
+/* ── T5.7 — toggleInference ─────────────────────────────────────────────── */
+function toggleInference() {
+  fetch('/toggle_inference')
+    .then(r => r.json())
+    .then(data => {
+      const running = data.inference_running;
+
+      const dot    = document.getElementById('statusDot');
+      const text   = document.getElementById('statusText');
+      const btn    = document.getElementById('toggleBtn');
+      const vBadge = document.getElementById('vibeBadge');
+      const sBadge = document.getElementById('simBadge');
+      const vFeed  = document.getElementById('vibeFeed');
+      const rFeed  = document.getElementById('robotFeed');
+      const vPh    = document.getElementById('vibePlaceholder');
+      const sPh    = document.getElementById('simPlaceholder');
+
+      if (running) {
+        /* ── Started ── */
+        btn.textContent = 'Stop Inference';
+        btn.classList.add('running');
+
+        dot.classList.add('active');
+        text.textContent = 'Running';
+
+        vBadge.style.display = '';
+        sBadge.style.display = '';
+
+        /* LEFT panel — VIBE skeleton annotated stream */
+        vFeed.src = '/vibe_feed';
+        vFeed.style.display = 'block';
+        vPh.style.display   = 'none';
+
+        /* RIGHT panel — MuJoCo sim stream */
+        rFeed.src = '/robot_feed';
+        rFeed.style.display = 'block';
+        sPh.style.display   = 'none';
+
+        addLog('Inference started.');
+        startMetricsPolling();
+      } else {
+        /* ── Stopped ── */
+        btn.textContent = 'Start Inference';
+        btn.classList.remove('running');
+
+        dot.classList.remove('active');
+        text.textContent = 'Idle';
+
+        vBadge.style.display = 'none';
+        sBadge.style.display = 'none';
+
+        /* Stop MJPEG connections */
+        vFeed.src = '';
+        rFeed.src = '';
+        vFeed.style.display = 'none';
+        rFeed.style.display = 'none';
+        vPh.style.display   = '';
+        sPh.style.display   = '';
+
+        addLog('Inference stopped.');
+        stopMetricsPolling();
+      }
+    })
+    .catch(() => addLog('[error] Could not reach /toggle_inference'));
+}
+
+/* ── T5.8 — Metrics polling ───────────────────────────────────────────────── */
+function startMetricsPolling() {
+  if (metricsInterval) return;
+  metricsInterval = setInterval(fetchMetrics, 300);
+}
+
+function stopMetricsPolling() {
+  if (metricsInterval) {
+    clearInterval(metricsInterval);
+    metricsInterval = null;
+  }
+}
+
+function fetchMetrics() {
+  fetch('/metrics')
+    .then(r => r.json())
+    .then(m => {
+      /* FPS */
+      document.getElementById('metricFps').textContent = m.fps || '—';
+
+      /* Inference ms */
+      document.getElementById('metricInference').innerHTML =
+        (m.inference_ms || '—') + '<span class="metric-unit">ms</span>';
+
+      /* Retarget ms */
+      document.getElementById('metricRetarget').innerHTML =
+        (m.retarget_ms || '—') + '<span class="metric-unit">ms</span>';
+
+      /* Render ms (new — not in dl---2) */
+      document.getElementById('metricRender').innerHTML =
+        (m.render_ms || '—') + '<span class="metric-unit">ms</span>';
+
+      /* Frames */
+      document.getElementById('metricFrames').textContent = m.frame_count || 0;
+
+      /* Person detected */
+      const pEl = document.getElementById('metricPerson');
+      if (m.person_detected === true) {
+        pEl.textContent  = 'Yes';
+        pEl.className    = 'metric-value val-green';
+      } else {
+        pEl.textContent  = 'No';
+        pEl.className    = 'metric-value val-red';
+      }
+
+      /* VIBE posture (new integration) */
+      document.getElementById('metricPosture').textContent = m.posture || '—';
+    })
+    .catch(() => {});   /* silent fail if server is down */
+}
+
+/* ── T5.9 — addLog / clearLog ──────────────────────────────────────────────── */
+function addLog(msg) {
+  const container = document.getElementById('logEntries');
+  const now = new Date();
+  const ts  = now.toTimeString().slice(0, 8);
+
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML =
+    `<span class="log-ts">[${ts}]</span><span>${escapeHtml(msg)}</span>`;
+
+  container.prepend(line);
+
+  /* Keep max 30 entries */
+  while (container.children.length > 30) {
+    container.removeChild(container.lastChild);
+  }
+}
+
+function clearLog() {
+  document.getElementById('logEntries').innerHTML = '';
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ── T5.10 — checkHealth (runs on page load) ───────────────────────────────── */
+function checkHealth() {
+  fetch('/health')
+    .then(r => r.json())
+    .then(data => {
+      /* Show / hide mock banner */
+      const banner = document.getElementById('mockBanner');
+      if (data.mock_mode) {
+        banner.style.display = '';
+        addLog('Running in MOCK MODE — deploy to target machine for real inference');
+      }
+
+      /* Log dependency status */
+      const romp  = data.romp   ? 'OK' : 'MISSING';
+      const gmr   = data.gmr    ? 'OK' : 'MISSING';
+      const muj   = data.mujoco ? 'OK' : 'MISSING';
+      const vibe  = data.vibe   ? 'OK' : 'MISSING';
+      addLog(`Deps — ROMP: ${romp} | GMR: ${gmr} | MuJoCo: ${muj} | VIBE: ${vibe}`);
+    })
+    .catch(() => addLog('[health] Could not reach /health — server may still be starting'));
+}
+
+/* ── Boot ────────────────────────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  checkHealth();
+});
+</script>
+</body>
+</html>
