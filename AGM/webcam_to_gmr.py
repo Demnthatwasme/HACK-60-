@@ -2,6 +2,8 @@ import cv2
 import time
 import torch
 import numpy as np
+import threading
+import requests
 from scipy.spatial.transform import Rotation as R
 
 # Try to import ROMP
@@ -80,6 +82,27 @@ class CameraStream:
     def isOpened(self):
         return self.stream.isOpened()
 
+class PostureClient:
+    """
+    Background thread to independently poll the teammate's MediaPipe API.
+    This prevents HTTP requests from blocking or lagging the main pipeline!
+    """
+    def __init__(self, url="http://localhost:8080/get_pose"):
+        self.url = url
+        self.posture = "Waiting for VIBE API..."
+        self.running = True
+        self.thread = threading.Thread(target=self.update, daemon=True)
+        self.thread.start()
+        
+    def update(self):
+        while self.running:
+            try:
+                resp = requests.get(self.url, timeout=0.1)
+                if resp.status_code == 200:
+                    self.posture = resp.json().get("posture", "Unknown")
+            except Exception:
+                pass
+            time.sleep(0.05) # Poll 20 times a second
 
 class ROMPGMRPipeline:
     def __init__(self, robot_xml_path):
@@ -100,16 +123,18 @@ class ROMPGMRPipeline:
         if GeneralMotionRetargeting is not None:
             print(f"Loading GMR with robot: {robot_xml_path}")
             
-            # GMR init expects "smplx" as the key in its config dictionary
-            self.retargeter = GeneralMotionRetargeting("smplx", robot_xml_path, use_velocity_limit=True)
+            # GMR init expects "smplx" as the key in its config dictionary.
+            # We lower damping to 0.02 to prevent the IK solver from "freezing", but keep enough to avoid jitter.
+            self.retargeter = GeneralMotionRetargeting("smplx", robot_xml_path, use_velocity_limit=True, damping=0.02)
             print("GMR Retargeter Initialized.")
         else:
             self.retargeter = None
 
-        # Jitter Filtering State
-        self.prev_thetas = None
-        self.prev_trans = None
-        self.prev_joints_3d = None
+        # Ground Calibration State
+        self.fixed_ground_offset = None
+        
+        # Start independent API poller for teammate's VIBE classifier
+        self.posture_client = PostureClient()
 
     def process_frame(self, frame):
         if self.romp_model is None:
@@ -209,6 +234,13 @@ class ROMPGMRPipeline:
             # Rotate the frame 90 degrees clockwise for phone cameras
             frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
+            # --- BROADCAST FRAME TO VIBE CLASSIFIER VIA RAMDISK ---
+            # Linux /dev/shm is stored completely in RAM, so this is ultra-fast (sub-1ms)
+            # We use an atomic os.rename to prevent the VIBE script from reading a half-written JPEG
+            import os
+            cv2.imwrite('/dev/shm/droidcam_frame_tmp.jpg', frame)
+            os.rename('/dev/shm/droidcam_frame_tmp.jpg', '/dev/shm/droidcam_frame.jpg')
+
             # 1. Pose Estimation (Webcam -> ROMP)
             human_motion_dict = self.process_frame(frame)
 
@@ -223,7 +255,7 @@ class ROMPGMRPipeline:
                 # --- ROBOT JITTER FILTERING (EMA) ---
                 # Smoothing the final robot joint positions instead of raw human poses 
                 # avoids mathematical bugs with axis-angles.
-                alpha = 0.25 # Lower = smoother (0.25 is very smooth)
+                alpha = 0.4 # Higher = more responsive/less lag, Lower = smoother (0.4 is a sweet spot)
                 if not hasattr(self, 'prev_qpos'):
                     self.prev_qpos = robot_qpos.copy()
                 else:
@@ -259,6 +291,10 @@ class ROMPGMRPipeline:
                 cv2.putText(frame, "No Person Detected", (20, 70), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
+            # Display Teammate's VIBE Posture Classification
+            cv2.putText(frame, f"VIBE Posture: {self.posture_client.posture}", (20, 110), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 165, 0), 2)
+
             # Compute and show FPS
             current_time = time.time()
             fps = 1 / (current_time - prev_time)
@@ -267,15 +303,19 @@ class ROMPGMRPipeline:
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
             if not headless:
-                # Display
-                cv2.imshow("Webcam to GMR (ROMP)", frame)
-                
                 # Check if 3D viewer was closed
                 if viewer is not None and not viewer.viewer.is_running():
                     break
-                
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                    
+            # Check for reset flag sent by VIBE classifier
+            if os.path.exists('/dev/shm/reset_robot'):
+                os.remove('/dev/shm/reset_robot')
+                if self.retargeter is not None:
+                    # Resets the internal mink IK solver state to default T-pose
+                    self.retargeter.setup_retarget_configuration()
+                if hasattr(self, 'prev_qpos'):
+                    del self.prev_qpos
+                print("\nReceived Reset Signal from VIBE! Robot state reset to default neutral pose.\n")
 
         if viewer is not None:
             try:
